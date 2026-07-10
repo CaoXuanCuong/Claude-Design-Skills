@@ -1,0 +1,21 @@
+{
+  "$comment": "Config template for component-ui-to-design. Copy to configs/<app>.json and fill by INSPECTING the target Shopify app's frontend repo (do NOT guess). Paths: `frontend`/`esbuildDir` are relative to THIS file's directory unless absolute; `alias` values are relative to `frontend`; `shims` values are relative to this file. See SKILL.md §Per-app config. Prerequisite: run /sync-design-system for the app's DS first — this skill renders against its bundle.",
+  "name": "<app>",
+  "frontend": "<path to the app's SPA frontend root, e.g. ../../../../<repo>/web/frontend>",
+  "globalName": "AppUI",
+  "esbuildDir": "<dir with esbuild + ts-morph installed, usually the DS sync dir, e.g. ../../../../<repo>/.ds-sync>",
+  "envGlobal": "__APP_ENV__",
+  "dsGlobals": {
+    "@shopify/polaris": "window.<DSGlobal>",
+    "@shopify/polaris-icons": "window.<DSGlobal>"
+  },
+  "alias": { "@": "." },
+  "publicDir": "assets",
+  "i18n": {
+    "lang": "en",
+    "resources": ["locales/en.json", "locales/en"],
+    "wrapperHooks": ["hooks/useTranslation"]
+  },
+  "reexports": [],
+  "shims": {}
+}

@@ -1,0 +1,9 @@
+{
+  "email": "cuong.2992000@gmail.com",
+  "password": "xxxxxxxxx",
+  "shopifyDomain": "caocuongxuan.myshopify.com",
+  "storeHandle": "caocuongxuan",
+  "appHandle": "bloy",
+  "outputDir": "features/plans/screenshots",
+  "chromeProfile": "/home/pc/.cache/bloy-playwright-profile"
+}

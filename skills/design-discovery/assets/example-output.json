@@ -1,0 +1,80 @@
+{
+  "feature": "BLOY-1234 — Rewards program: thêm tab Info + sửa bảng phần thưởng",
+  "generatedAt": "2026-06-24",
+  "source": {
+    "designExport": "/home/pc/Downloads/bloy-rewards-handoff/",
+    "jira": "BLOY-1234",
+    "appRepo": "shopify-app-loyalty-cms",
+    "appPath": "web/frontend"
+  },
+  "viewport": [1440, 900],
+  "pages": [
+    {
+      "name": "editor-info-tab",
+      "design": {
+        "screen": "RewardsProgram",
+        "reach": ["goto::/rewards_program", "click::text='Info'"]
+      },
+      "app": {
+        "route": "/rewards_program",
+        "file": "web/frontend/pages/rewards_program/index.jsx",
+        "component": "RewardsProgram",
+        "exists": true,
+        "reach": ["goto::/rewards_program", "click::text='Info'"]
+      },
+      "elements": [
+        {
+          "op": "add",
+          "name": "Tab 'Info'",
+          "selector": "role=tab[name='Info']",
+          "polaris": {
+            "component": "Tabs",
+            "composition": "Page > Tabs (tab list) > Tabs panel",
+            "props": { "Tabs": { "fitted": false } },
+            "matchesCodebase": "RewardsProgram đã dùng Tabs cho Earn/Redeem — thêm tab vào cùng mảng tabs",
+            "custom": false
+          },
+          "anchor": "Cuối mảng tabs hiện có (sau 'Redeem points')",
+          "spec": "Jira AC#1: thêm tab Info hiển thị mô tả chương trình",
+          "events": [
+            {
+              "trigger": "onClick tab 'Info'",
+              "action": "setSelectedTab(index) → render panel Info",
+              "verify": "assert::text='Program description' visible"
+            }
+          ]
+        },
+        {
+          "op": "update",
+          "name": "Bảng phần thưởng (Ways to earn)",
+          "selector": "text='Ways to earn'",
+          "polaris": {
+            "component": "IndexTable",
+            "composition": "Card > IndexTable (+ useIndexResourceState, useSetIndexFiltersMode)",
+            "props": { "IndexTable": { "selectable": true } },
+            "matchesCodebase": "Customers page dùng IndexTable + useIndexResourceState — tái dùng đúng pattern đó",
+            "custom": false
+          },
+          "anchor": "Trong tab 'Earn points', thay cho bảng cũ",
+          "spec": "Jira AC#3: cho phép chọn nhiều dòng + bulk disable",
+          "diff": "App đang dùng DataTable (không chọn được dòng) → đổi sang IndexTable để có selection + bulk action",
+          "events": [
+            {
+              "trigger": "onClick bulk action 'Disable'",
+              "action": "PUT /admin/reward-program/earn/bulk (web/frontend/services/rewardProgram) → toast 'Updated'",
+              "verify": "assert::text='Updated' visible"
+            }
+          ]
+        }
+      ],
+      "verify": [
+        "assert::role=tab[name='Info'] visible",
+        "assert::text='Ways to earn' visible"
+      ]
+    }
+  ],
+  "open_questions": [
+    "Spec không nói validation cho field 'Points per order' — chặn giá trị < 0 hay cho phép 0?",
+    "Design có icon riêng cho mỗi reward row — chưa có trong Polaris icons, cần asset SVG từ design team."
+  ]
+}

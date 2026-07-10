@@ -1,0 +1,35 @@
+{
+  "skill_name": "component-ui-to-design",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Đưa 2 custom Polaris component (ví dụ một color/swatch selector và một icon selector) trong frontend của app lên Claude Design thành gallery tương tác, đủ các state.",
+      "expected_output": "Companion bundle built from the real sources (window.<AppUI>); a gallery card where the swatch opens the real picker, the hex field edits, the icon active-state toggles; console clean; state matrix in .prompt.md matches rendered cells.",
+      "files": []
+    },
+    {
+      "id": 2,
+      "prompt": "Bóc tách một image-dropzone component thành design system component trên claude design — phải cover cả state empty, đã có ảnh, và lỗi validate (file quá size).",
+      "expected_output": "Gallery covers empty / preview / error states; error state reachable by interaction (not a static mock); fixture shapes derived from the component's validation/useController usage; any pre-existing app warning documented, not patched.",
+      "files": []
+    },
+    {
+      "id": 3,
+      "prompt": "Sync toàn bộ một folder custom component lên Claude Design làm design system dùng chung cho team.",
+      "expected_output": "Inventory + classification first (compileable vs hand-build fallback); ONE build with all components; per-component cards in group '<App> components/'; NOTES.md updated with the rebuild command; re-sync gotcha noted.",
+      "files": []
+    },
+    {
+      "id": 4,
+      "prompt": "Compile một page dạng form (có tab, modal, save bar) lên claude design, giữ nguyên UX flow.",
+      "expected_output": "Page compiled via --pages with the app's config; mounted in MemoryRouter; selectors traced to build the __APP_STATE__ fixture; on-mount service calls fixtured via window.fetch; modals open as overlays; click-test per handler.",
+      "files": []
+    },
+    {
+      "id": 5,
+      "prompt": "Team có một Shopify app khác (repo frontend React+Polaris riêng). Setup để bóc component của app đó lên claude design.",
+      "expected_output": "Follows §Per-app config: checks the app's DS is synced first; inspects vite config for alias/publicDir; copies configs/_template.json → configs/<app>.json (NOT reusing another app's answers); smoke-builds 2-3 components; runs the four verify gates before trusting the config.",
+      "files": []
+    }
+  ]
+}

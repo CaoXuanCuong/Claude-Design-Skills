@@ -1,0 +1,75 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>{{COMPONENT_NAME}} — {{APP}} component gallery</title>
+<!-- Co-located inside the DS project: the card can reach the live Polaris bundle.
+     Depth below assumes components/<app>-components/<Name>/<Name>.html — adjust ../ if moved. -->
+<link rel="stylesheet" href="../../../_ds_bundle.css">
+<link rel="stylesheet" href="../../../{{BUNDLE_DIR}}/{{BUNDLE}}.css">
+<style>
+  body{margin:24px;background:#f6f6f7;font-family:Inter,-apple-system,sans-serif}
+  .cell{background:#fff;border:1px solid #e3e3e3;border-radius:12px;padding:16px;margin-bottom:16px;max-width:720px}
+  .cell h3{margin:0 0 12px;font-size:12px;font-weight:600;color:#6d7175;text-transform:uppercase;letter-spacing:.4px}
+</style>
+</head>
+<body>
+<div id="app-root"></div>
+<script>
+  /* ── Fixture seams — set BEFORE the bundles load. Shapes are derived from the
+     component's code (selectors, useFieldArray/useController usage, service calls),
+     never guessed. See SKILL.md §3. ── */
+  window.__APP_ENV__ = { SERVER_URL: '/__fx', NODE_ENV: 'production' /* {{ENV}} */ };
+  window.__APP_STATE__ = { general: { shop: { domain: 'design-preview.myshopify.com', plan: 'pro' }, configs: {}, isLoading: false } /* {{STATE}} */ };
+  // Visible toast — the real app shows a host toast; an invisible shim fails verify gate 3.
+  window.__APP_TOAST__ = (m, o) => { const d = document.createElement('div'); d.textContent = (o && o.isError ? '⚠ ' : '') + m; d.style.cssText = 'position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:#202223;color:#fff;padding:8px 16px;border-radius:8px;z-index:999;font:13px Inter,sans-serif'; document.body.appendChild(d); setTimeout(() => d.remove(), (o && o.duration) || 1500); };
+  // Fixture fetch: match the service paths this component calls; payloads shaped like the real API.
+  const realFetch = window.fetch.bind(window);
+  window.fetch = (url, opts) => {
+    const u = String(url);
+    if (u.startsWith('/__fx')) {
+      /* {{FIXTURE_ROUTES}} — e.g.:
+      if (u.includes('/widgets')) return fx({ payload: [{ id: 'w1', name: 'Launcher' }], message: 'ok' }); */
+      return fx({ payload: [], message: 'ok' });
+    }
+    return realFetch(url, opts);
+  };
+  const fx = (json, status = 200) => Promise.resolve(new Response(JSON.stringify(json), { status, headers: { 'Content-Type': 'application/json' } }));
+</script>
+<script src="../../../_vendor/react.js"></script>
+<script src="../../../_vendor/react-dom.js"></script>
+<script src="../../../_ds_bundle.js"></script>
+<script src="../../../{{BUNDLE_DIR}}/{{BUNDLE}}.js"></script>
+<script>
+/* node --check this IIFE before upload — a missing `)` is the #1 failure. */
+(function () {
+  const R = window.React, P = window.Polaris, U = window.{{GLOBAL}};
+  const h = R.createElement;
+  const cell = (title, child) => h('div', { className: 'cell' }, h('h3', null, title), child);
+
+  // One form per gallery cell so states don't bleed into each other.
+  function Cell({ title, defaults, render }) {
+    const { control } = U.useForm({ defaultValues: defaults });
+    return cell(title, render(control));
+  }
+
+  function Gallery() {
+    return h(R.Fragment, null,
+      /* {{CELLS}} — one Cell per state-matrix row, e.g.:
+      h(Cell, { title: 'ColorSelector — default', defaults: { c: '#5C6AC4' },
+        render: (control) => h(U.ColorSelector, { label: 'Brand color', name: 'c', control }) }),
+      h(Cell, { title: 'ColorSelector — floating picker', defaults: { c: '#D82C0D' },
+        render: (control) => h(U.ColorSelector, { label: 'Brand color', name: 'c', control, floatingPicker: true }) }),
+      — or a compiled PAGE (needs router context; App-Bridge modals open as overlays):
+      cell('Customers page', h(U.MemoryRouter, null, h(U.Customers))), */
+      null
+    );
+  }
+
+  const App = h(P.AppProvider, { i18n: P.previewI18n || {} },
+    P.FrameContext ? h(P.FrameContext.Provider, { value: {} }, h(Gallery)) : h(Gallery));
+  window.ReactDOM.createRoot(document.getElementById('app-root')).render(App);
+})();
+</script>
+</body>
+</html>

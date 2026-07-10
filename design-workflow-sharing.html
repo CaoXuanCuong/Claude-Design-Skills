@@ -1,0 +1,858 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Design Workflow Optimization — Internal Sharing</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700;9..144,800&family=Inter:wght@400;500;600;700&family=Spline+Sans+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* ===========================================
+   VIEWPORT FITTING: MANDATORY BASE STYLES
+   =========================================== */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body { height: 100%; overflow-x: hidden; }
+html { scroll-snap-type: y mandatory; scroll-behavior: smooth; }
+
+.slide {
+    width: 100vw; height: 100vh; height: 100dvh;
+    overflow: hidden; scroll-snap-align: start;
+    display: flex; flex-direction: column; position: relative;
+}
+.slide-content {
+    flex: 1; display: flex; flex-direction: column; justify-content: center;
+    max-height: 100%; overflow: hidden; padding: var(--slide-padding);
+    max-width: 1200px; margin: 0 auto; width: 100%;
+}
+
+:root {
+    --title-size: clamp(1.7rem, 5.4vw, 4.2rem);
+    --h2-size: clamp(1.3rem, 3.6vw, 2.6rem);
+    --h3-size: clamp(1rem, 2.5vw, 1.6rem);
+    --body-size: clamp(0.82rem, 1.5vw, 1.1rem);
+    --small-size: clamp(0.66rem, 1vw, 0.86rem);
+    --slide-padding: clamp(1.25rem, 4vw, 4rem);
+    --content-gap: clamp(0.6rem, 2vw, 1.6rem);
+    --element-gap: clamp(0.3rem, 1vw, 0.9rem);
+
+    /* THEME: Claude — warm paper / clay */
+    --bg: #EFEBE0;
+    --bg-2: #F4F0E7;
+    --panel: #FBFAF5;
+    --panel-2: #F5F1E8;
+    --border: #E3DCCB;
+    --border-soft: #EAE4D6;
+    --text: #2B2820;
+    --muted: #6E695C;
+    --dim: #9A9484;
+    --clay: #C4623E;
+    --clay-bright: #D97757;
+    --clay-deep: #A84B2E;
+    --blue: #4F708F;
+    --amber: #B9852F;
+    --plum: #8C6AA6;
+    --sage: #5F8360;
+    --red: #BC5140;
+}
+
+body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+}
+
+/* soft paper atmosphere */
+body::before {
+    content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 9998;
+    background:
+      radial-gradient(1200px 700px at 50% -20%, rgba(217,119,87,0.05), transparent 60%);
+    opacity: 0.9;
+}
+.slide::before {
+    content: ""; position: absolute; inset: 0; pointer-events: none; z-index: 0;
+    background:
+      radial-gradient(880px 560px at 88% -12%, rgba(217,119,87,0.12), transparent 62%),
+      radial-gradient(720px 520px at -6% 112%, rgba(79,112,143,0.10), transparent 58%),
+      radial-gradient(circle at 22% 28%, rgba(0,0,0,0.015) 1px, transparent 1.4px) 0 0 / clamp(22px,3vw,34px) clamp(22px,3vw,34px);
+}
+.slide-content { position: relative; z-index: 1; }
+
+/* ---- typography helpers ---- */
+.kicker {
+    font-family: 'Spline Sans Mono', ui-monospace, monospace;
+    font-size: var(--small-size); letter-spacing: 0.22em; text-transform: uppercase;
+    color: var(--clay); font-weight: 500; display: flex; align-items: center; gap: 0.6em;
+}
+.kicker::before { content: "✳"; color: var(--clay-bright); font-size: 1.05em; }
+
+h1 { font-family: 'Fraunces', serif; font-size: var(--title-size); line-height: 1.02; font-weight: 600; letter-spacing: -0.018em; }
+h2 { font-family: 'Fraunces', serif; font-size: var(--h2-size); line-height: 1.08; font-weight: 600; letter-spacing: -0.012em; }
+h3 { font-family: 'Fraunces', serif; font-size: var(--h3-size); font-weight: 600; letter-spacing: -0.01em; }
+p { font-size: var(--body-size); line-height: 1.6; color: var(--muted); }
+.lead { color: var(--text); }
+.clay { color: var(--clay); }
+.blue { color: var(--blue); }
+.amber { color: var(--amber); }
+.red { color: var(--red); }
+.plum { color: var(--plum); }
+.sage { color: var(--sage); }
+.muted { color: var(--muted); }
+strong { color: var(--text); font-weight: 600; }
+em { font-style: italic; }
+
+.mono { font-family: 'Spline Sans Mono', ui-monospace, monospace; }
+
+/* ---- title slide ---- */
+.title-wrap { display: flex; flex-direction: column; gap: var(--content-gap); }
+.title-wrap h1 { margin-top: 0.1em; }
+.title-sub {
+    font-size: var(--h3-size); color: var(--text); font-weight: 400;
+    border-left: 3px solid var(--clay); padding-left: 0.8em; line-height: 1.4;
+}
+.epigraph {
+    background: var(--panel); border: 1px solid var(--border); border-left: 3px solid var(--blue);
+    border-radius: 14px; padding: clamp(.7em,1.4vw,1.1em) clamp(.9em,1.6vw,1.3em);
+    max-width: 780px; box-shadow: 0 10px 30px rgba(43,40,32,0.05);
+}
+.epigraph p { color: var(--text); font-size: var(--body-size); font-style: italic; line-height: 1.5; font-family: 'Fraunces', serif; }
+.epigraph .by { color: var(--blue); font-style: normal; font-size: var(--small-size); margin-top: .5em; display:block; font-family: 'Inter', sans-serif; }
+.title-foot {
+    display: flex; flex-wrap: wrap; gap: 0.6em 1.4em; margin-top: 0.2em;
+    font-size: var(--small-size); color: var(--dim); font-family: 'Spline Sans Mono', monospace;
+}
+.title-foot span { display: inline-flex; align-items: center; gap: 0.5em; }
+.dot { width: 8px; height: 8px; border-radius: 50%; background: var(--clay-bright); box-shadow: 0 0 12px rgba(217,119,87,0.6); }
+.blink { animation: blink 1.15s steps(1) infinite; color: var(--clay-bright); }
+@keyframes blink { 50% { opacity: 0; } }
+
+/* ---- generic header ---- */
+.head { display: flex; flex-direction: column; gap: 0.4em; margin-bottom: var(--content-gap); }
+.cycle { font-size: var(--small-size); color: var(--muted); letter-spacing: .01em; }
+.cycle b { color: var(--clay); font-weight: 600; }
+
+/* ---- preview / prompt window ---- */
+.term {
+    background: var(--panel); border: 1px solid var(--border); border-radius: 14px;
+    overflow: hidden; box-shadow: 0 24px 60px rgba(43,40,32,0.10);
+}
+.term-bar {
+    display: flex; align-items: center; gap: 0.5em; padding: 0.6em 1em;
+    background: var(--panel-2); border-bottom: 1px solid var(--border);
+    font-size: var(--small-size); color: var(--dim); font-family: 'Spline Sans Mono', monospace;
+}
+.tl { width: 11px; height: 11px; border-radius: 50%; }
+.tl.r{background:#E4A08A}.tl.y{background:#E8C489}.tl.g{background:#A9C7A2}
+.term-title { margin-left: 0.6em; }
+.term-body { padding: clamp(0.8em,1.6vw,1.3em); font-size: var(--body-size); line-height: 1.75; font-family: 'Spline Sans Mono', monospace; }
+.term-body .row { white-space: pre-wrap; color: var(--text); }
+
+/* ---- cards / grids ---- */
+.grid { display: grid; gap: clamp(0.6rem, 1.5vw, 1rem); }
+.cols-2 { grid-template-columns: repeat(2, 1fr); }
+.cols-3 { grid-template-columns: repeat(3, 1fr); }
+.cols-4 { grid-template-columns: repeat(4, 1fr); }
+@media (max-width: 760px){ .cols-2,.cols-3,.cols-4 { grid-template-columns: 1fr; } }
+
+.card {
+    background: var(--panel);
+    border: 1px solid var(--border); border-radius: 14px;
+    padding: clamp(0.85em, 1.6vw, 1.35em); position: relative; overflow: hidden;
+    box-shadow: 0 6px 22px rgba(43,40,32,0.045);
+}
+.card .num {
+    font-family: 'Spline Sans Mono', monospace;
+    font-size: var(--small-size); color: var(--clay); font-weight: 500; letter-spacing: 0.06em; text-transform: uppercase;
+}
+.card h3 { margin: 0.3em 0 0.35em; }
+.card p { font-size: var(--small-size); line-height: 1.55; }
+.card .file {
+    margin-top: 0.6em; font-size: var(--small-size); color: var(--blue); font-family: 'Spline Sans Mono', monospace;
+    display: inline-block; background: rgba(79,112,143,0.08);
+    border: 1px solid rgba(79,112,143,0.22); border-radius: 8px; padding: 0.18em 0.6em;
+}
+.card.accent-clay::after, .card.accent-blue::after, .card.accent-amber::after,
+.card.accent-red::after, .card.accent-plum::after, .card.accent-sage::after {
+    content:""; position:absolute; left:0; top:0; bottom:0; width:4px;
+}
+.card.accent-clay{ border-color:rgba(196,98,62,.35) } .card.accent-clay::after{background:var(--clay)}
+.card.accent-blue{ border-color:rgba(79,112,143,.35) } .card.accent-blue::after{background:var(--blue)}
+.card.accent-amber{ border-color:rgba(185,133,47,.35) } .card.accent-amber::after{background:var(--amber)}
+.card.accent-red{ border-color:rgba(188,81,64,.35) } .card.accent-red::after{background:var(--red)}
+.card.accent-plum{ border-color:rgba(140,106,166,.38) } .card.accent-plum::after{background:var(--plum)}
+.card.accent-sage{ border-color:rgba(95,131,96,.35) } .card.accent-sage::after{background:var(--sage)}
+
+.loop-stage { display:flex; align-items:flex-start; gap:0.8em; }
+.loop-stage .icon {
+    flex:none; width: clamp(2.2em,4vw,2.8em); height: clamp(2.2em,4vw,2.8em);
+    display:grid; place-items:center; border-radius: 12px; font-weight:700;
+    font-size: var(--h3-size); border:1px solid var(--border); background: var(--panel-2);
+}
+.s-act .icon{color:var(--blue); border-color:rgba(79,112,143,.4)}
+.s-obs .icon{color:var(--clay); border-color:rgba(196,98,62,.4)}
+.s-gate .icon{color:var(--amber); border-color:rgba(185,133,47,.4)}
+.s-rec .icon{color:var(--sage); border-color:rgba(95,131,96,.4)}
+.s-state .icon{color:var(--plum); border-color:rgba(140,106,166,.4)}
+
+/* bullet list */
+.blist { list-style: none; display: flex; flex-direction: column; gap: clamp(0.5em,1.4vh,0.95em); }
+.blist li { font-size: var(--body-size); line-height: 1.5; color: var(--muted); padding-left: 1.4em; position: relative; }
+.blist li::before { content: "›"; position: absolute; left: 0; color: var(--clay); font-weight: 700; }
+.blist li strong { color: var(--text); }
+
+/* checklist */
+.checks { list-style:none; display:flex; flex-direction:column; gap: clamp(.5em,1.6vh,1em); }
+.checks li { font-size: var(--body-size); line-height:1.45; color: var(--text); padding-left: 1.8em; position: relative; }
+.checks li::before { content:"✓"; position:absolute; left:0; color: var(--sage); font-weight:700; }
+.checks li span { color: var(--muted); }
+
+/* ladder / steps */
+.rung {
+    display:flex; align-items:center; gap: clamp(0.6em,1.5vw,1.2em);
+    background: var(--panel); border:1px solid var(--border); border-radius: 14px;
+    padding: clamp(0.75em,1.5vw,1.15em); box-shadow: 0 6px 20px rgba(43,40,32,0.04);
+}
+.rung .lvl { flex:none; font-family:'Fraunces',serif; font-size: var(--h2-size); font-weight:700; color: var(--clay); width: 1.4em; text-align:center; }
+.rung .body h3 { margin-bottom: 0.15em; }
+.rung .body p { font-size: var(--small-size); }
+
+/* level table */
+.lvl-sub { font-size: var(--body-size); color: var(--text); font-weight:500; }
+.lvl-note { font-size: var(--small-size); color: var(--muted); }
+.lvltable { width:100%; border:1px solid var(--border); border-radius:14px; overflow:hidden; background: var(--panel); box-shadow: 0 16px 44px rgba(43,40,32,.07); }
+.lvlrow { display:grid; grid-template-columns: clamp(2.2em,5vw,3.2em) 1.25fr 1.5fr 1.5fr; gap: clamp(.4em,1.2vw,1em); align-items:center; padding: clamp(.4em,1vh,.72em) clamp(.7em,1.5vw,1.1em); border-bottom:1px solid var(--border-soft); position:relative; }
+.lvlrow:last-child { border-bottom:none; }
+.lvlrow::before { content:""; position:absolute; left:0; top:0; bottom:0; width:4px; background: var(--rc, transparent); }
+.lvlrow.h { background: var(--panel-2); }
+.lvlrow.h::before { display:none; }
+.lvlrow.h span { color: var(--clay); font-size: var(--small-size); letter-spacing:.06em; text-transform:uppercase; font-weight:600; font-family:'Spline Sans Mono',monospace; }
+.lv { font-family:'Fraunces',serif; font-weight:700; font-size: var(--h3-size); text-align:center; color: var(--rc,var(--text)); }
+.lab { color: var(--text); font-weight:600; font-size: var(--small-size); line-height:1.22; }
+.cc { font-size: var(--small-size); color: var(--muted); line-height:1.3; }
+@media (max-width:620px){ .lvlrow { grid-template-columns: 2em 1fr; } .lvlrow .cc { display:none; } }
+
+/* compare */
+.cmp { display:grid; grid-template-columns:1fr auto 1fr; align-items:stretch; gap:clamp(.6rem,1.6vw,1.4rem); }
+.cmp .approx { display:grid; place-items:center; font-family:'Fraunces',serif; font-size:clamp(1.6rem,5vw,3.2rem); font-weight:700; color:var(--clay); }
+@media (max-width:760px){ .cmp{ grid-template-columns:1fr; } .cmp .approx{ font-size:1.6rem; transform:rotate(90deg); } }
+
+/* rising steps */
+.stack{ --u:clamp(0px,2.4vw,38px); display:flex; flex-direction:column; gap:clamp(.4rem,1.1vh,.65rem); }
+.step{ display:flex; align-items:center; gap:clamp(.5em,1.3vw,.9em); background:var(--panel); border:1px solid var(--border); border-radius:12px; padding:clamp(.55em,1.2vw,.9em) clamp(.85em,1.6vw,1.25em); box-shadow: 0 5px 16px rgba(43,40,32,.04); }
+.step .ic{ font-family:'Spline Sans Mono',monospace; font-size:var(--h3-size); width:1.4em; text-align:center; color:var(--blue); flex:none; }
+.step .nm{ font-weight:600; color:var(--text); font-size:var(--body-size); }
+.step .ds{ color:var(--muted); font-size:var(--small-size); margin-left:.5em; }
+.step .yr{ margin-left:auto; font-family:'Spline Sans Mono',monospace; font-size:var(--small-size); color:var(--dim); white-space:nowrap; padding-left:.6em; }
+.step.now{ border-color:var(--clay); background:linear-gradient(90deg,rgba(217,119,87,.14),var(--panel)); box-shadow:0 0 0 1px rgba(196,98,62,.25),0 14px 34px rgba(43,40,32,.08); }
+.step.now .nm,.step.now .ic{ color:var(--clay); } .step.now .yr{ color:var(--clay); }
+.step.next{ border-style:dashed; opacity:.85; } .step.next .ic{ color:var(--plum); }
+@media (max-width:600px){ .step .ds{ display:none; } .stack{ --u:0px; } }
+
+/* pipeline flow */
+.flow{ display:flex; flex-wrap:wrap; align-items:center; justify-content:center; gap:.4em; }
+.flow .fp{ font-family:'Spline Sans Mono',monospace; font-size:var(--small-size); background:var(--panel); border:1px solid var(--border); border-radius:10px; padding:.35em .75em; color:var(--text); white-space:nowrap; box-shadow:0 4px 12px rgba(43,40,32,.04); }
+.flow .fp.hl{ border-color:var(--clay); color:var(--clay); box-shadow:0 0 0 1px rgba(196,98,62,.25); }
+.flow .ar{ color:var(--clay); font-weight:700; }
+
+/* sandbox */
+.sandbox{ position:relative; border:2px dashed var(--clay); border-radius:18px; padding:clamp(1.3em,2.8vw,2.3em); background:rgba(217,119,87,.05); max-width:900px; margin:0 auto; }
+.sandbox .sb-cap{ position:absolute; top:-.7em; left:1.2em; background:var(--bg); padding:0 .6em; font-family:'Spline Sans Mono',monospace; font-size:var(--small-size); color:var(--clay); letter-spacing:.05em; text-transform:uppercase; font-weight:500; }
+.sandbox .sb-mid{ text-align:center; color:var(--text); font-family:'Fraunces',serif; font-size:var(--h3-size); font-weight:600; }
+.chips{ display:flex; flex-wrap:wrap; gap:.5em; justify-content:center; margin-top:.9em; }
+.chips span{ font-size:var(--small-size); color:var(--text); background:var(--panel); border:1px solid var(--border); border-radius:999px; padding:.3em .9em; }
+.sb-rail{ margin-top:1em; text-align:center; font-size:var(--small-size); color:var(--amber); border-top:1px dashed var(--border); padding-top:.75em; }
+
+/* file tree */
+.tree{ font-family:'Spline Sans Mono',monospace; font-size:var(--body-size); line-height:1.95; background:var(--panel); border:1px solid var(--border); border-radius:14px; padding:clamp(.9em,2vw,1.4em) clamp(1em,2.2vw,1.5em); box-shadow:0 10px 30px rgba(43,40,32,.05); overflow-x:auto; }
+.tree > div{ white-space:nowrap; }
+.tree .t-dir{ color:var(--clay); font-weight:600; }
+.tree .t-file{ color:var(--text); }
+.tree .cmt{ color:var(--dim); }
+@media (max-width:760px){ .tree{ font-size:var(--small-size); line-height:1.8; } }
+
+/* pull quote */
+.pull {
+    font-family:'Fraunces',serif;
+    font-size: clamp(1.1rem, 2.9vw, 2.05rem); line-height: 1.24; font-weight: 600;
+    color: var(--text); letter-spacing: -0.012em;
+}
+
+/* takeaways */
+.tk { display:flex; gap:0.8em; align-items:baseline; }
+.tk .n { font-family:'Fraunces',serif; font-size: var(--h2-size); font-weight:700; color: var(--clay); line-height:1; }
+.tk .x h3 { margin-bottom:0.1em; font-weight:500; }
+.tk .x p { font-size: var(--small-size); }
+
+.credit { margin-top: var(--content-gap); font-size: var(--small-size); color: var(--dim); border-top: 1px solid var(--border); padding-top: .7em; font-family:'Spline Sans Mono',monospace; }
+.credit b { color: var(--muted); }
+
+/* ---- reveal animation ---- */
+.reveal { opacity: 0; transform: translateY(18px); transition: opacity .6s cubic-bezier(.16,1,.3,1), transform .6s cubic-bezier(.16,1,.3,1); }
+.slide.active .reveal { opacity: 1; transform: none; }
+.slide.active .reveal:nth-child(2){ transition-delay:.08s }
+.slide.active .reveal:nth-child(3){ transition-delay:.16s }
+.slide.active .reveal:nth-child(4){ transition-delay:.24s }
+.slide.active .reveal:nth-child(5){ transition-delay:.32s }
+.stagger > * { opacity:0; transform: translateY(16px); transition: opacity .5s ease, transform .5s ease; }
+.slide.active .stagger > * { opacity:1; transform:none; }
+.slide.active .stagger > *:nth-child(1){transition-delay:.10s}
+.slide.active .stagger > *:nth-child(2){transition-delay:.20s}
+.slide.active .stagger > *:nth-child(3){transition-delay:.30s}
+.slide.active .stagger > *:nth-child(4){transition-delay:.40s}
+
+/* ---- chrome ---- */
+.progress { position: fixed; top:0; left:0; height: 3px; background: linear-gradient(90deg,var(--clay-bright),var(--blue)); width:0; z-index: 9999; box-shadow: 0 0 12px rgba(217,119,87,.5); transition: width .3s ease; }
+.nav-dots { position: fixed; right: clamp(10px,2vw,26px); top: 50%; transform: translateY(-50%); display:flex; flex-direction:column; gap: 9px; z-index: 9999; }
+.nav-dots button { width: 9px; height: 9px; border-radius:50%; border:1px solid var(--dim); background: transparent; cursor:pointer; padding:0; transition: all .25s ease; }
+.nav-dots button.on { background: var(--clay); border-color: var(--clay); box-shadow: 0 0 10px rgba(196,98,62,.5); transform: scale(1.25); }
+.idx { position: fixed; left: clamp(12px,2vw,26px); bottom: clamp(12px,2vw,22px); font-family:'Spline Sans Mono',monospace; font-size: var(--small-size); color: var(--dim); z-index: 9999; }
+.idx b { color: var(--clay); }
+.hint { position: fixed; right: clamp(12px,2vw,26px); bottom: clamp(12px,2vw,22px); font-family:'Spline Sans Mono',monospace; font-size: var(--small-size); color: var(--dim); z-index: 9999; }
+
+@media (max-height: 700px){ :root{ --slide-padding: clamp(0.9rem,3vw,2rem); --content-gap: clamp(0.5rem,1.5vw,1rem);} }
+@media (max-height: 600px){ .nav-dots,.hint{display:none} }
+@media (max-width: 600px){ .nav-dots{display:none} :root{ --title-size: clamp(1.5rem,8vw,2.6rem);} }
+@media (prefers-reduced-motion: reduce){
+    *,*::before,*::after{ animation-duration:.01ms !important; transition-duration:.2s !important; }
+    html{ scroll-behavior:auto; }
+    .reveal,.stagger>*{ opacity:1; transform:none; }
+}
+</style>
+</head>
+<body>
+<div class="progress" id="progress"></div>
+<nav class="nav-dots" id="dots" aria-label="Slide navigation"></nav>
+<div class="idx" id="idx"><b>01</b> / 16</div>
+<div class="hint">↑ ↓ · space · scroll</div>
+
+<main>
+
+<!-- 1. TITLE -->
+<section class="slide" id="s1">
+  <div class="slide-content title-wrap">
+    <div class="kicker reveal">Internal Sharing · Design &amp; Product · ~20 phút</div>
+    <h1 class="reveal">Design Workflow<br><span class="clay">Optimization.</span><span class="blink">_</span></h1>
+    <div class="title-sub reveal">Dùng <strong>Claude Design</strong> để nối liền <strong>thiết kế → spec → code</strong> — và cách team mình tiếp cận công cụ đó.</div>
+    <div class="epigraph reveal">
+      <p>"Thiết kế không còn là một bức tranh tĩnh để 'bàn giao'. Nó trở thành nguyên liệu máy đọc được — để sinh spec và code."</p>
+      <span class="by">— chủ đề buổi sharing hôm nay</span>
+    </div>
+    <div class="title-foot reveal">
+      <span><span class="dot"></span> Prototype · Bundle · Discovery · Build · Verify</span>
+      <span class="muted">· stack: BLOY Loyalty · Polaris · Playwright</span>
+    </div>
+  </div>
+</section>
+
+<!-- 2. THE GAP -->
+<section class="slide" id="s2">
+  <div class="slide-content">
+    <div class="head">
+      <div class="kicker reveal">01 — Vấn đề</div>
+      <h2 class="reveal">Khoảng cách <span class="clay">design → code</span> đang ăn thời gian của ta</h2>
+      <div class="cycle reveal">Quy trình cũ: mockup tĩnh → doc bàn giao → dev tự đọc, tự đoán → code lệch → review qua lại.</div>
+    </div>
+    <div class="term reveal" style="max-width:900px">
+      <div class="term-bar"><span class="tl r"></span><span class="tl y"></span><span class="tl g"></span><span class="term-title">handoff-cu.log</span></div>
+      <div class="term-body">
+        <div class="row"><span class="clay">→</span> designer vẽ mockup tĩnh trên Figma</div>
+        <div class="row muted">→ viết doc mô tả spacing, state, behavior... (hoặc không)</div>
+        <div class="row"><span class="red">✗</span> dev đọc, <em>đoán</em> component nào, state nào, event nào</div>
+        <div class="row muted">→ code ra lệch pixel / thiếu state / sai UI components</div>
+        <div class="row"><span class="amber">⟳</span> <span class="amber">review qua lại 3–4 vòng — chi phí nằm ở khâu "dịch" thủ công</span></div>
+      </div>
+    </div>
+    <p class="reveal lead" style="margin-top:var(--content-gap); font-size:var(--h3-size)">
+      Điểm nghẽn không phải "vẽ đẹp" — mà là <span class="clay">dịch thiết kế thành code đúng</span>, lặp đi lặp lại bằng tay.
+      <br><span class="muted" style="font-size:.82em">→ Gần đây có một công cụ sinh ra để gỡ đúng khâu này.</span>
+    </p>
+  </div>
+</section>
+
+<!-- 3. WHAT IS CLAUDE DESIGN -->
+<section class="slide" id="s3">
+  <div class="slide-content">
+    <div class="head">
+      <div class="kicker reveal">02 — Công cụ</div>
+      <h2 class="reveal">Claude Design là gì?</h2>
+      <div class="cycle reveal"><b>claude.ai/design</b> — mô tả bằng ngôn ngữ tự nhiên, Claude sinh ra giao diện <b>thật, chạy được</b>.</div>
+    </div>
+    <div class="grid cols-3 stagger">
+      <div class="card accent-clay">
+        <div class="num">Không phải ảnh tĩnh</div>
+        <h3>Giao diện sống</h3>
+        <p>Claude sinh UI <strong>tương tác được</strong> — có state, có layout thật, không phải hình PNG bất động để "ướm".</p>
+      </div>
+      <div class="card accent-blue">
+        <div class="num">Iterate bằng lời</div>
+        <h3>Sửa như nói chuyện</h3>
+        <p>"Đổi sang layout 2 cột", "thêm empty state", "dùng tone ấm hơn" — chỉnh nhanh bằng câu lệnh, không kéo thả từng pixel.</p>
+      </div>
+      <div class="card accent-plum">
+        <div class="num">Export ra được</div>
+        <h3>Design bundle</h3>
+        <p>Tải về <strong>một bundle handoff</strong> (design + state + asset) — đây chính là input máy đọc được cho khâu code.</p>
+      </div>
+    </div>
+    <p class="reveal" style="margin-top:var(--content-gap); text-align:center; color:var(--text); font-size:var(--h3-size)">
+      Điểm mấu chốt: output không dừng ở <span class="muted">"đẹp để xem"</span> — mà là <span class="clay">artifact để đưa thẳng vào pipeline code</span>.
+      <br><span class="muted" style="font-size:.82em">→ Nhìn vào bên trong một project Claude Design.</span>
+    </p>
+  </div>
+</section>
+
+<!-- 3n. PROJECT STRUCTURE -->
+<section class="slide" id="s-struct">
+  <div class="slide-content">
+    <div class="head">
+      <div class="kicker reveal">03 — Cấu trúc</div>
+      <h2 class="reveal">Một project Claude Design <span class="clay">giống một codebase</span></h2>
+      <div class="cycle reveal">Không phải một canvas rời — mà là project có chuẩn dùng chung: <b>design system + file .md</b> làm "rules", các <b>project</b> sử dụng rules đó.</div>
+    </div>
+    <div class="grid cols-2" style="align-items:start; gap:clamp(.8rem,2vw,1.4rem)">
+      <div class="tree reveal">
+<div><span class="t-dir">project/</span></div>
+<div><span class="t-dir">├─ Design system files/</span>  <span class="cmt"># thư viện component</span></div>
+<div>│&nbsp;&nbsp;&nbsp;<span class="t-dir">└─ shopify-polaris-…/</span>  <span class="cmt"># Polaris</span></div>
+<div><span class="t-dir">├─ uploads/</span>  <span class="cmt"># ảnh tham chiếu, asset</span></div>
+<div>├─ <span class="t-file">shopify-bfs-ui-skill.md</span>  <span class="cmt"># skill: quy ước UI</span></div>
+<div>├─ <span class="t-file">Loyalty Program Setup.dc.html</span>  <span class="cmt"># PAGE: bản design</span></div>
+<div>└─ <span class="t-file">support.js</span>  <span class="cmt"># script hỗ trợ</span></div>
+      </div>
+      <div class="stagger" style="display:flex; flex-direction:column; gap:clamp(.5rem,1.4vh,.8rem)">
+        <div class="card accent-clay"><div class="num">Design system files</div><p>Thư viện component + token dùng chung (vd <strong>Shopify Polaris</strong>). <strong>Nguồn chân lý</strong> để mọi page vẽ bằng đúng "gạch".</p></div>
+        <div class="card accent-blue"><div class="num">Skill .md</div><p>Quy ước &amp; hướng dẫn cho Claude khi design (vd <span class="mono">shopify-bfs-ui-skill.md</span>) — ép output theo chuẩn của team.</p></div>
+        <div class="card accent-plum"><div class="num">Pages .dc.html</div><p>Các bản design thật, tương tác được (vd <em>Loyalty Program Setup</em>). Đây là thứ <strong>export thành bundle</strong>.</p></div>
+        <div class="card accent-sage"><div class="num">uploads / scripts</div><p>Asset tham chiếu &amp; script phụ trợ — giữ project <strong>tự đủ</strong> như một repo nhỏ.</p></div>
+      </div>
+    </div>
+    <p class="reveal" style="margin-top:var(--content-gap); text-align:center; color:var(--text); font-size:var(--body-size)">
+      Cốt lõi: project có <span class="clay">chuẩn dùng chung</span>. Và phần chuẩn ấy — <strong>Design System</strong> — là điểm ăn tiền nhất.
+    </p>
+  </div>
+</section>
+
+<!-- 3m. DESIGN SYSTEM = KILLER -->
+<section class="slide" id="s-ds">
+  <div class="slide-content">
+    <div class="head">
+      <div class="kicker reveal">04 — Điểm ăn tiền</div>
+      <h2 class="reveal">Design System — <span class="clay">thứ ăn tiền nhất</span> của Claude Design</h2>
+      <div class="cycle reveal">Định nghĩa component <b>một lần</b> (variant + state) → mọi page tái sử dụng đúng component đó. Generic AI mockup <b>không có</b> thứ này.</div>
+    </div>
+    <div class="grid cols-3 stagger">
+      <div class="card accent-clay">
+        <div class="num">Component thật, không phải hình</div>
+        <h3>Variant + state</h3>
+        <p>Vd <strong>Button</strong>: Default · Critical · Primary, kèm state hover / disabled / … — hệt một component library code thật, không phải khối vẽ rời.</p>
+      </div>
+      <div class="card accent-blue">
+        <div class="num">Một nguồn chân lý</div>
+        <h3>Nhất quán tự động</h3>
+        <p>Sửa component ở design system → <strong>mọi page cập nhật theo</strong>. Không còn mỗi page một kiểu button lệch nhau.</p>
+      </div>
+      <div class="card accent-plum">
+        <div class="num">Vì sao nối được sang code</div>
+        <h3>Map thẳng sang code UI Components</h3>
+        <p>Claude dựng lại bằng <strong>đúng UI Component</strong> → discovery map 1-1 sang code, không phải "đoán component nào trông giống".</p>
+      </div>
+    </div>
+    <p class="reveal" style="margin-top:var(--content-gap); text-align:center; color:var(--text); font-size:var(--h3-size); line-height:1.4">
+      Nạp <span class="clay">design system của team</span> → Claude dựng lại Component có thể dùng ở mọi project.
+    </p>
+  </div>
+</section>
+
+<!-- 3b. FIGMA vs CLAUDE DESIGN -->
+<section class="slide" id="s3b">
+  <div class="slide-content">
+    <div class="head">
+      <div class="kicker reveal">05 — Định vị</div>
+      <h2 class="reveal">Figma &amp; Claude Design — <span class="clay">bổ trợ</span>, không thay thế</h2>
+      <div class="cycle reveal">Ở thời điểm hiện tại, Claude Design <b>chưa</b> thay được Figma. Mỗi bên mạnh một khúc — dùng đúng chỗ mới tối ưu.</div>
+    </div>
+    <div class="cmp stagger">
+      <div class="card accent-blue">
+        <div class="num blue">FIGMA · nơi thiết kế "chín"</div>
+        <ul class="blist" style="margin-top:.5em">
+          <li>Mạnh: <strong>craft thị giác, token &amp; control tới từng pixel</strong></li>
+          <li>Mạnh: cộng tác realtime, comment, plugin, asset &amp; branding</li>
+          <li><span class="red">Pain:</span> mockup <strong>tĩnh</strong> — state/behavior phải mô tả tay</li>
+          <li><span class="red">Pain:</span> prototype interaction <strong>dựng thủ công</strong>, tốn công</li>
+          <li><span class="red">Pain:</span> handoff → dev vẫn <strong>dịch tay</strong> sang code, dễ lệch</li>
+        </ul>
+      </div>
+      <div class="approx">+</div>
+      <div class="card accent-clay">
+        <div class="num">CLAUDE DESIGN · nơi tạo nhanh &amp; nối code</div>
+        <ul class="blist" style="margin-top:.5em">
+          <li>Mạnh: <strong>design system tái sử dụng</strong> — vẽ bằng đúng component (Polaris)</li>
+          <li>Mạnh: <strong>sinh UI thật, chạy được</strong>; output là bundle máy đọc được → code</li>
+          <li>Mạnh: dựng nhanh nhiều <strong>state / phương án</strong> để chốt sớm</li>
+          <li><span class="amber">Hạn chế:</span> craft thị giác &amp; <strong>pixel-control</strong> tinh xảo chưa bằng Figma</li>
+          <li><span class="amber">Hạn chế:</span> collaboration, plugin, quản <strong>asset/brand</strong> — Figma vẫn hơn</li>
+        </ul>
+      </div>
+    </div>
+    <p class="reveal" style="margin-top:var(--content-gap); text-align:center; color:var(--text); font-size:var(--h3-size); line-height:1.4">
+      Cách dùng: <span class="blue">Figma</span> để chốt hệ thống thị giác &amp; polish · <span class="clay">Claude Design</span> để tạo nhanh, thử state &amp; nối mạch sang code.
+      <br><span class="muted" style="font-size:.82em">→ Sự bổ trợ này đổi cách ta nhìn "bản thiết kế" thế nào?</span>
+    </p>
+  </div>
+</section>
+
+<!-- 4. WHY IT FITS US -->
+<section class="slide" id="s4">
+  <div class="slide-content">
+    <div class="head">
+      <div class="kicker reveal">06 — Góc nhìn</div>
+      <h2 class="reveal">Từ <span class="red">bàn giao</span> → <span class="clay">nối mạch</span></h2>
+      <div class="cycle reveal">Cách bạn nghĩ về "bản thiết kế" quyết định ta tối ưu được quy trình hay không.</div>
+    </div>
+    <div class="cmp stagger">
+      <div class="card accent-red">
+        <div class="num red">TRƯỚC · design là ĐIỂM DỪNG</div>
+        <ul class="blist" style="margin-top:.5em">
+          <li>Mockup xong là <strong>"ném qua tường"</strong> cho dev</li>
+          <li>Ý đồ nằm trong đầu designer, không đo được</li>
+          <li>Dev <strong>tự phiên dịch</strong> sang component</li>
+          <li>Lệch thì phát hiện muộn, sửa tốn</li>
+        </ul>
+      </div>
+      <div class="approx">→</div>
+      <div class="card accent-clay">
+        <div class="num">VỚI CLAUDE DESIGN · design là NGUYÊN LIỆU</div>
+        <ul class="blist" style="margin-top:.5em">
+          <li>Bundle là <strong>input trực tiếp</strong> cho spec &amp; code</li>
+          <li>State &amp; behavior <strong>hiện rõ</strong> trong design</li>
+          <li>Máy map design → <strong>Polaris component</strong></li>
+          <li>Sai khớp lộ ra sớm qua <span class="blue">visual diff</span></li>
+        </ul>
+      </div>
+    </div>
+    <p class="reveal" style="margin-top:var(--content-gap); text-align:center; color:var(--text); font-size:var(--h3-size); line-height:1.4">
+      Cùng một bản thiết kế — nhưng thay vì <strong>"tài liệu để đọc"</strong>, nó thành <span class="clay">mắt xích chạy được</span> trong dây chuyền của ta.
+      <br><span class="muted" style="font-size:.82em">→ Dây chuyền đó trông ra sao?</span>
+    </p>
+  </div>
+</section>
+
+<!-- 5. THE NEW PIPELINE -->
+<section class="slide" id="s5">
+  <div class="slide-content">
+    <div class="head">
+      <div class="kicker reveal">07 — Quy trình mới</div>
+      <h2 class="reveal">Một dây chuyền <span class="clay">từ ý tưởng tới code đã verify</span></h2>
+    </div>
+    <div class="flow reveal">
+      <span class="fp hl">Claude Design</span><span class="ar">→</span>
+      <span class="fp">export bundle</span><span class="ar">→</span>
+      <span class="fp">gather-spec</span><span class="ar">→</span>
+      <span class="fp">explore-spec</span><span class="ar">→</span>
+      <span class="fp">design-discovery</span><span class="ar">→</span>
+      <span class="fp">writing-plans</span><span class="ar">→</span>
+      <span class="fp">execute</span><span class="ar">→</span>
+      <span class="fp">verify (Playwright)</span><span class="ar">↻</span>
+    </div>
+    <div class="lvl-note reveal" style="text-align:center; margin:.5em 0 0">Toàn bộ đóng gói trong <strong class="mono">/bloy:build-feature --ticket "BLOY-xx"</strong> — mỗi step chạy ở context riêng, có state &amp; gate.</div>
+    <div class="grid cols-4 stagger" style="margin-top:var(--content-gap)">
+      <div class="card accent-clay">
+        <div class="num">B1 · prototype</div>
+        <p>Dựng &amp; iterate UI trên <strong>Claude Design</strong>, chốt các state cần có.</p>
+      </div>
+      <div class="card accent-blue">
+        <div class="num">B2 · gather-spec</div>
+        <p>Gộp <strong>requirement Jira</strong> + <strong>bundle design</strong> thành một <span class="mono">spec.md</span> duy nhất.</p>
+      </div>
+      <div class="card accent-plum">
+        <div class="num">B3 · discovery</div>
+        <p>Map mỗi design-state → <strong>route / component / Polaris</strong> cần ADD·UPDATE·DELETE.</p>
+      </div>
+      <div class="card accent-sage">
+        <div class="num">B4 · build + verify</div>
+        <p>Plan → code → <strong>Playwright</strong> screenshot &amp; visual-diff về đúng bản design.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 6. DESIGN-DISCOVERY DEEP -->
+<section class="slide" id="s6">
+  <div class="slide-content">
+    <div class="head">
+      <div class="kicker reveal">08 — Trái tim của mạch nối</div>
+      <h2 class="reveal">design-discovery: <span class="clay">bắc cầu design ↔ code</span></h2>
+      <div class="cycle reveal">Đây là bước <b>phân tích</b> (chưa code) — biến bundle design thành bản đồ triển khai chính xác cho CMS admin (Polaris SPA).</div>
+    </div>
+    <div class="grid cols-2 stagger">
+      <div class="card accent-blue">
+        <div class="num">Map — không đoán</div>
+        <h3>Design-state → route/component</h3>
+        <p>Mỗi state trong design được gắn vào <strong>đúng route &amp; component</strong> của app (xác định app-router qua codegraph), và mỗi element → <strong>đúng Polaris component</strong>.</p>
+      </div>
+      <div class="card accent-clay">
+        <div class="num">Chỉ rõ việc phải làm</div>
+        <h3>ADD · UPDATE · DELETE</h3>
+        <p>Liệt kê element nào cần <strong>thêm/sửa/xoá</strong>, handler/event nào cần <strong>wire</strong> — thay vì để dev tự suy diễn từ hình.</p>
+      </div>
+      <div class="card accent-plum">
+        <div class="num">Đường tới state</div>
+        <h3>Playwright action chain</h3>
+        <p>Chuỗi action để <strong>tới đúng state đó</strong> và để <strong>verify</strong>, kèm screenshot/crop tham chiếu.</p>
+      </div>
+      <div class="card accent-sage">
+        <div class="num">Đo được</div>
+        <h3>Visual diff + tolerance</h3>
+        <p>Gắn reference screenshot &amp; ngưỡng sai khác → khớp/không khớp là <strong>fact</strong>, không phải cảm tính.</p>
+      </div>
+    </div>
+    <p class="reveal" style="margin-top:var(--content-gap); text-align:center; color:var(--text); font-size:var(--body-size)">
+      Output là spec đủ chi tiết để <span class="clay">một agent khác code &amp; tự verify frontend</span> — khâu "dịch tay" biến mất.
+    </p>
+  </div>
+</section>
+
+<!-- 7. HOW THE TEAM APPROACHES -->
+<section class="slide" id="s7">
+  <div class="slide-content">
+    <div class="head">
+      <div class="kicker reveal">09 — Cách tiếp cận</div>
+      <h2 class="reveal">Team mình leo <span class="clay">3 bậc</span>, không nhảy cóc</h2>
+    </div>
+    <div class="grid stagger" style="gap:clamp(.5rem,1.5vh,.9rem)">
+      <div class="rung"><div class="lvl">1</div><div class="body"><h3>Prototype thay cho mô tả <span class="muted">(designer + PM)</span></h3><p>Dùng Claude Design để <strong>dựng giao diện thật</strong> thay vì mô tả bằng chữ. Chốt đủ các state (empty · loading · error · success) ngay trên bản prototype — đây là "spec sống".</p></div></div>
+      <div class="rung"><div class="lvl">2</div><div class="body"><h3>Bundle vào pipeline <span class="muted">(1 lệnh)</span></h3><p>Export bundle → <strong class="mono">/bloy:build-feature --ticket</strong>. Để gather-spec + discovery lo phần map sang Polaris/route. Dev review <strong>spec &amp; plan</strong>, không dịch tay từ hình.</p></div></div>
+      <div class="rung"><div class="lvl">3</div><div class="body"><h3>Verify bằng mắt máy <span class="muted">(dev + QA)</span></h3><p>Code xong, <strong>Playwright chụp state thật</strong> trong Shopify admin và so với bản design. Lệch là gate bắt được — không cần soi pixel bằng tay.</p></div></div>
+    </div>
+    <p class="reveal" style="margin-top:var(--content-gap); text-align:center; font-size:var(--h3-size); color:var(--text)">
+      Đừng bắt đầu bằng bậc 3. <span class="clay">Giá trị lớn nhất là bậc 1–2 làm cho chắc</span> — prototype rõ, bundle sạch.
+    </p>
+  </div>
+</section>
+
+<!-- 8. ROLES / DECISION AUTHORITY -->
+<section class="slide" id="s8">
+  <div class="slide-content">
+    <div class="head">
+      <div class="kicker reveal">10 — Ai làm gì</div>
+      <h2 class="reveal">Mỗi vai <span class="clay">giữ đúng phần giá trị</span> của mình</h2>
+      <div class="cycle reveal">Công cụ không thay vai — nó gỡ phần lặp tay để mỗi người tập trung vào phần khó.</div>
+    </div>
+    <div class="sandbox reveal">
+      <div class="sb-cap">Con người vạch ý đồ &amp; ranh giới</div>
+      <div class="sb-mid">Claude Design + pipeline lo phần "dịch"</div>
+      <div class="chips">
+        <span>Designer · ý đồ &amp; hệ thống thị giác</span>
+        <span>PM · state &amp; acceptance</span>
+        <span>Dev · kiến trúc &amp; review</span>
+        <span>QA · verify visual</span>
+      </div>
+      <div class="sb-rail">⛔ ranh giới cứng: không tự đổi API/data-model · không skip green-gate · Polaris theo đúng API version của lớp đang đụng</div>
+    </div>
+    <p class="reveal" style="margin-top:var(--content-gap); text-align:center; color:var(--text); font-size:var(--h3-size); line-height:1.4">
+      Designer vẫn quyết <strong>thẩm mỹ</strong>, dev vẫn quyết <strong>kiến trúc</strong> — máy chỉ lấy đi khâu <span class="clay">phiên dịch thủ công</span> ở giữa.
+    </p>
+  </div>
+</section>
+
+<!-- 9. GUARDRAILS -->
+<section class="slide" id="s9">
+  <div class="slide-content">
+    <div class="head">
+      <div class="kicker reveal">11 — Khuôn khổ</div>
+      <h2 class="reveal">Tự chủ trong <span class="amber">rào cứng</span></h2>
+      <div class="cycle reveal">Tối ưu quy trình không có nghĩa bỏ kiểm soát — vẫn giữ các gate của ta.</div>
+    </div>
+    <div class="grid cols-2" style="align-items:start">
+      <div class="reveal">
+        <ul class="checks">
+          <li>Prototype trên Claude Design để <strong>chốt state &amp; flow</strong> <span>— không nhảy thẳng vào code.</span></li>
+          <li>Luôn qua <strong>spec.md + explore-spec</strong> <span>— bundle không tự thành code.</span></li>
+          <li><strong>Playwright verify</strong> mọi state <span>— visual diff là fact, không phải "nhìn thấy ổn".</span></li>
+          <li>Đúng <strong>Polaris API version</strong> theo lớp <span>— Web layer 2026-01, không dùng "latest".</span></li>
+        </ul>
+      </div>
+      <div class="reveal">
+        <div class="card accent-amber">
+          <div class="num amber">Rào cứng tuyệt đối</div>
+          <p><span class="clay">Không tự đổi API / data-model</span> · branch riêng · qua <strong>green-gate</strong> (build + test xanh) · không push khi chưa duyệt.</p>
+          <p style="margin-top:.5em"><strong>Security:</strong> không <span class="mono">dangerouslySetInnerHTML</span> vô cớ · validate input · query scope theo <span class="mono">shopId</span> — bundle design không miễn trừ các luật này.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 10. LOOP vs OLD -->
+<section class="slide" id="s10">
+  <div class="slide-content">
+    <div class="head">
+      <div class="kicker reveal">12 — Được gì</div>
+      <h2 class="reveal">Tối ưu nằm ở <span class="clay">khâu bị lặp nhiều nhất</span></h2>
+      <div class="cycle reveal">Không phải "vẽ nhanh hơn" — mà là 3 thứ ta lấy lại được từ khâu dịch tay giữa design và code.</div>
+    </div>
+    <div class="grid cols-3 stagger">
+      <div class="card accent-clay">
+        <div class="num">01 · thời gian</div>
+        <h3>Bớt vòng dịch tay</h3>
+        <p>Máy map design → <strong>Polaris / route</strong>, dev chuyển từ "phiên dịch từ hình" sang <strong>review spec &amp; plan</strong>. Bớt hẳn các vòng qua lại.</p>
+      </div>
+      <div class="card accent-blue">
+        <div class="num">02 · chất lượng</div>
+        <h3>Bắt lệch sớm</h3>
+        <p><strong>Playwright visual-diff</strong> so bản dựng với design ngay khi code xong. Lệch là <strong>fact có ngưỡng</strong> — lộ ra sớm, không đợi review muộn.</p>
+      </div>
+      <div class="card accent-plum">
+        <div class="num">03 · tri thức</div>
+        <h3>Ghi trong artifact</h3>
+        <p>State &amp; flow nằm trong <strong>bundle + spec</strong>, không kẹt trong đầu một người. Người mới, hay lần sửa sau, đọc lại được.</p>
+      </div>
+    </div>
+    <p class="reveal" style="margin-top:var(--content-gap); text-align:center; color:var(--text); font-size:var(--h3-size); line-height:1.4">
+      Tối ưu thật nằm ở chỗ <span class="clay">bỏ được vòng dịch tay</span> và <span class="blue">bắt lệch sớm</span> — không phải ở tốc độ vẽ.
+    </p>
+  </div>
+</section>
+
+<!-- 11. FIRST STEP -->
+<section class="slide" id="s11">
+  <div class="slide-content">
+    <div class="head">
+      <div class="kicker reveal">13 — Bắt đầu</div>
+      <h2 class="reveal">Thử ngay với <span class="clay">một ticket nhỏ</span></h2>
+      <div class="cycle reveal">Không cần đổi cả quy trình trong một ngày — chọn một feature UI vừa phải để chạy thử end-to-end.</div>
+    </div>
+    <div class="stack reveal" style="--u:0px">
+      <div class="step"><span class="ic" style="color:var(--clay)">1</span><span class="nm">Chọn 1 ticket UI nhỏ</span><span class="ds">một page/section có vài state rõ ràng</span><span class="yr">PM</span></div>
+      <div class="step"><span class="ic" style="color:var(--clay)">2</span><span class="nm">Prototype trên Claude Design</span><span class="ds">chốt các state, export bundle</span><span class="yr">designer</span></div>
+      <div class="step"><span class="ic" style="color:var(--blue)">3</span><span class="nm">/bloy:build-feature --ticket</span><span class="ds">gather-spec → discovery → plan → execute</span><span class="yr">dev</span></div>
+      <div class="step"><span class="ic" style="color:var(--sage)">4</span><span class="nm">Playwright verify + review</span><span class="ds">so bản dựng với design, chốt gate</span><span class="yr">dev · QA</span></div>
+      <div class="step"><span class="ic" style="color:var(--plum)">5</span><span class="nm">Retro nhanh</span><span class="ds">chỗ nào nhanh hơn, chỗ nào còn vướng</span><span class="yr">cả team</span></div>
+    </div>
+    <p class="reveal" style="margin-top:var(--content-gap); text-align:center; color:var(--text); font-size:var(--body-size)">
+      Mục tiêu buổi thử: <span class="clay">đo thật</span> — rút ngắn được bao nhiêu vòng dịch/review so với cách cũ.
+    </p>
+  </div>
+</section>
+
+<!-- 14n. MINDSET -->
+<section class="slide" id="s-mindset">
+  <div class="slide-content">
+    <div class="head">
+      <div class="kicker reveal">14 — Mindset</div>
+      <h2 class="reveal">4 tư duy khi dùng <span class="clay">Claude Design</span></h2>
+      <div class="cycle reveal">Công cụ chỉ mạnh khi đi kèm cách nghĩ đúng — đây là phần quyết định team dùng nó hiệu quả hay không.</div>
+    </div>
+    <div class="grid cols-2 stagger">
+      <div class="card accent-clay">
+        <div class="num">01 · vai trò</div>
+        <h3>Đồng đội, không thay ca</h3>
+        <p>Claude Design lo phần dựng &amp; dịch — <strong>gu và quyết định thẩm mỹ vẫn là của con người</strong>. Bổ trợ Figma, không thay designer.</p>
+      </div>
+      <div class="card accent-blue">
+        <div class="num">02 · thứ tự</div>
+        <h3>Design system trước, page sau</h3>
+        <p>Đầu tư vào <strong>chuẩn dùng chung</strong> (Polaris + skill) mới ăn tiền. Đừng vẽ ad-hoc từng page rồi mỗi nơi một kiểu.</p>
+      </div>
+      <div class="card accent-plum">
+        <div class="num">03 · đơn vị tư duy</div>
+        <h3>Nghĩ bằng component &amp; state</h3>
+        <p>Vì output để <strong>nối code</strong>. Liệt kê đủ state (empty · loading · error · success) quan trọng hơn là canh lề cho đẹp.</p>
+      </div>
+      <div class="card accent-sage">
+        <div class="num">04 · vị thế output</div>
+        <h3>Prototype để nghĩ, không để "xong"</h3>
+        <p>Dùng để <strong>thử nhanh &amp; chốt sớm</strong>, rẻ. Bundle là nguyên liệu — luôn qua spec + verify, <strong>không copy mù</strong> ra production.</p>
+      </div>
+    </div>
+    <p class="pull reveal" style="margin-top:var(--content-gap); text-align:center">
+      Đổi cách nghĩ: từ <span class="muted">"vẽ giao diện"</span> → <span class="clay">"định nghĩa hệ thống, rồi để máy dựng &amp; nối code"</span>.
+    </p>
+  </div>
+</section>
+
+<!-- 12. SUMMARY -->
+<section class="slide" id="s12">
+  <div class="slide-content">
+    <div class="head">
+      <div class="kicker reveal">15 — Tổng kết</div>
+      <h2 class="reveal">Tóm lại</h2>
+    </div>
+    <div class="grid stagger" style="gap:clamp(.4rem,1.3vh,.8rem)">
+      <div class="tk"><div class="n">1</div><div class="x"><h3>Điểm nghẽn là <span class="clay">khâu dịch design → code bằng tay</span> — không phải khâu vẽ.</h3></div></div>
+      <div class="tk"><div class="n">2</div><div class="x"><h3><span class="clay">Claude Design bổ trợ, chưa thay Figma</span> — biến thiết kế thành <strong>bundle máy đọc được</strong>, chạy thẳng vào pipeline.</h3></div></div>
+      <div class="tk"><div class="n">3</div><div class="x"><h3>Mạch nối: <span class="blue">Design → gather-spec → design-discovery → build → Playwright verify</span>, gói trong <span class="mono">/bloy:build-feature</span>.</h3></div></div>
+      <div class="tk"><div class="n">4</div><div class="x"><h3>Tiếp cận theo <span class="clay">3 bậc</span>: prototype chắc → bundle vào pipeline → verify bằng mắt máy. Bắt đầu từ một ticket nhỏ.</h3></div></div>
+    </div>
+    <p class="pull reveal" style="margin-top:var(--content-gap)">
+      Thiết kế xong, gần như xong code — khác biệt nằm ở chỗ ai chịu khó <span class="clay">nối liền cái mạch</span> ở giữa.<span class="blink">_</span>
+    </p>
+    <div class="credit reveal">
+      <b>Công cụ:</b> claude.ai/design · skill design-discovery · command /bloy:build-feature · verify: Playwright MCP · stack: BLOY Loyalty (Polaris · React 18)
+    </div>
+  </div>
+</section>
+
+</main>
+
+<script>
+(function(){
+  const slides = Array.from(document.querySelectorAll('.slide'));
+  const total = slides.length;
+  const dotsWrap = document.getElementById('dots');
+  const progress = document.getElementById('progress');
+  const idx = document.getElementById('idx');
+  let current = 0;
+
+  slides.forEach((s,i)=>{
+    const b = document.createElement('button');
+    b.setAttribute('aria-label','Go to slide '+(i+1));
+    b.addEventListener('click',()=> slides[i].scrollIntoView());
+    dotsWrap.appendChild(b);
+  });
+  const dots = Array.from(dotsWrap.children);
+
+  function setCurrent(i){
+    current = i;
+    dots.forEach((d,k)=> d.classList.toggle('on', k===i));
+    progress.style.width = ((i)/(total-1)*100)+'%';
+    idx.innerHTML = '<b>'+String(i+1).padStart(2,'0')+'</b> / '+String(total).padStart(2,'0');
+  }
+
+  const io = new IntersectionObserver((entries)=>{
+    entries.forEach(e=>{
+      if(e.isIntersecting && e.intersectionRatio>=0.55){
+        e.target.classList.add('active');
+        setCurrent(slides.indexOf(e.target));
+      }
+    });
+  },{threshold:[0.55]});
+  slides.forEach(s=> io.observe(s));
+  slides[0].classList.add('active');
+  setCurrent(0);
+
+  function go(dir){
+    const n = Math.min(total-1, Math.max(0, current+dir));
+    if(n!==current) slides[n].scrollIntoView();
+  }
+  window.addEventListener('keydown',(e)=>{
+    if(['ArrowDown','PageDown',' '].includes(e.key)){ e.preventDefault(); go(1); }
+    else if(['ArrowUp','PageUp'].includes(e.key)){ e.preventDefault(); go(-1); }
+    else if(e.key==='Home'){ e.preventDefault(); slides[0].scrollIntoView(); }
+    else if(e.key==='End'){ e.preventDefault(); slides[total-1].scrollIntoView(); }
+  });
+
+  let ty=null;
+  window.addEventListener('touchstart',e=>{ ty=e.touches[0].clientY; },{passive:true});
+  window.addEventListener('touchend',e=>{
+    if(ty===null) return;
+    const dy = ty - e.changedTouches[0].clientY;
+    if(Math.abs(dy)>60) go(dy>0?1:-1);
+    ty=null;
+  },{passive:true});
+})();
+</script>
+</body>
+</html>
